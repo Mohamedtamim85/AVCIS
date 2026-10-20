@@ -50,7 +50,34 @@
     toastTimer = setTimeout(() => el.classList.remove("show"), 2500);
   }
 
+  // Each navigation gets a new ticket; async views check theirs is still current
+  // after awaiting, so a slow response never overwrites a newer page.
+  let ticket = 0;
+  const nav = {
+    next: () => ++ticket,
+    current: () => ticket
+  };
+
+  // Views register cleanup (e.g. flushing unsaved text) to run before the next page renders.
+  let leaveHooks = [];
+  function onLeave(fn) {
+    leaveHooks.push(fn);
+  }
+  function runLeaveHooks() {
+    const hooks = leaveHooks;
+    leaveHooks = [];
+    hooks.forEach(fn => { try { fn(); } catch (e) { console.error(e); } });
+  }
+
+  function loading() {
+    return `<div class="loading" role="status">Loading…</div>`;
+  }
+
   window.AVCIS = {
+    nav,
+    loading,
+    onLeave,
+    runLeaveHooks,
     DATA,
     ALL_SAFEGUARDS,
     app: document.getElementById("app"),

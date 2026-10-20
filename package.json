@@ -1,0 +1,20 @@
+{
+  "name": "avcis",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Alphavito CIS Controls v8.1 catalog and customer assessment workspace",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env server/index.js",
+    "user": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env server/cli.js",
+    "backup": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env server/cli.js backup",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js"
+  },
+  "dependencies": {
+    "express": "5.1.0",
+    "pg": "8.16.3"
+  }
+}

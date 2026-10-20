@@ -15,7 +15,9 @@
  *            IG2 includes all IG1 safeguards, IG3 includes all of them.
  *   desc   – short summary
  */
-window.CIS_DATA = {
+(function (root) {
+"use strict";
+const CIS_DATA = {
   version: "8.1",
   assetTypes: ["Devices", "Software", "Data", "Users", "Network", "Documentation"],
   functions: ["Govern", "Identify", "Protect", "Detect", "Respond", "Recover"],
@@ -333,3 +335,8 @@ window.CIS_DATA = {
     }
   ]
 };
+
+// Works as a browser script (window.CIS_DATA) and as a Node module.
+if (typeof module === "object" && module.exports) module.exports = CIS_DATA;
+else root.CIS_DATA = CIS_DATA;
+})(typeof self !== "undefined" ? self : this);

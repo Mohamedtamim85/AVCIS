@@ -6,24 +6,102 @@ present the framework to customers, propose solutions and run CIS assessments.
 
 ## Run it
 
-It's a plain static site with no build step and no dependencies.
+Requires **Node.js 22.9 or newer**.
 
-- Open `index.html` directly in a browser, **or**
-- Serve the folder: `python3 -m http.server 8080` → http://localhost:8080
+```bash
+npm install
+cp .env.example .env        # then set ADMIN_PASSWORD (min 10 characters)
+npm start                   # http://localhost:3000
+```
 
-It can be hosted on any static host (Hostinger, Vercel, GitHub Pages, IIS, nginx…).
+On first start the server creates the admin account from `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
+Sign in, then add your team under **Users**.
+
+> Opening `public/index.html` directly (or hosting `public/` on a static host) still works in
+> **Local mode**: no sign-in, and assessments are saved only in that browser. Handy for demos.
+
+## Data storage
+
+| Option | When | Configure |
+|---|---|---|
+| **SQLite** (default) | One server (VPS, Hostinger, office server, Docker) | Nothing. Data lives in `data/avcis.db` |
+| **PostgreSQL** | Managed / cloud databases (Neon, Supabase, Azure, AWS RDS) or several app servers | Set `DATABASE_URL` |
+
+- Tables are created automatically on startup.
+- Each safeguard score is saved on its own as you work, so several consultants can score the same
+  assessment at once. If two people save the profile or scope at the same moment, the second person
+  is told and shown the latest version, so nothing is silently overwritten.
+- **Backups:** `npm run backup` writes a consistent copy of the SQLite database to `data/backups/`
+  (schedule it with cron). For PostgreSQL, use your provider's backups or `pg_dump`.
+  **Export** in the app also downloads assessments as JSON.
+- Assessments saved earlier in a browser (Local mode) can be uploaded to the server from the
+  Assessments page.
+
+## Users and roles
+
+| Role | Can |
+|---|---|
+| Admin | Everything, plus manage users |
+| Consultant | Create, edit, score, import/export and delete assessments |
+| Viewer | Read assessments only |
+
+Manage users in the app (**Users**, admins only) or from the command line:
+
+```bash
+npm run user -- add j.doe --name "Jane Doe"     # consultant (prompts for password)
+npm run user -- add boss --admin
+npm run user -- passwd j.doe                     # reset a password
+npm run user -- list
+```
+
+Security: passwords are hashed with scrypt; sessions are HMAC-signed HttpOnly cookies; failed
+logins are rate-limited; a strict Content-Security-Policy is sent. **Always serve it over HTTPS in
+production** (behind nginx/Caddy/your host's SSL) and set `TRUST_PROXY=true` when behind a proxy.
+
+## Deploy
+
+**Docker**
+
+```bash
+docker build -t avcis .
+docker run -d -p 3000:3000 -v avcis-data:/data \
+  -e ADMIN_USERNAME=admin -e ADMIN_PASSWORD='change-me-please' avcis
+```
+
+**VPS / Hostinger Node.js hosting**: upload the project, run `npm install --omit=dev`, set the
+environment variables from `.env.example` and start with `npm start` (or a process manager such as
+pm2). Put it behind HTTPS.
+
+## Tests
+
+```bash
+npm test                                                     # API tests on SQLite
+TEST_DATABASE_URL=postgres://user:pass@localhost/avcis_test npm test   # also on PostgreSQL
+```
 
 ## Project structure
 
 ```
-index.html               App shell (header, nav, footer)
-css/styles.css           Styles (light/dark, responsive)
-js/data/cis-controls.js  CIS v8.1 catalog + 0–5 maturity scale
-js/core.js               Shared helpers and route registry
-js/store.js              Assessment storage (localStorage) + JSON import/export
-js/catalog.js            Step 1 views: overview, control detail, safeguard search
-js/assessments.js        Step 2 views: assessment list, customer profile, scope
-js/app.js                Hash router
+public/                    Browser app (served by the server, or usable standalone)
+  index.html
+  css/styles.css
+  js/data/cis-controls.js  CIS v8.1 catalog + 0–5 maturity scale
+  js/model.js              Assessment model and validation (shared with the server)
+  js/core.js               Shared helpers and route registry
+  js/store.js              Storage: server API or browser (Local mode)
+  js/catalog.js            Step 1: overview, control detail, safeguard search
+  js/assessments.js        Steps 2–3: assessment list, profile, scope, scoring
+  js/account.js            Sign-in, my account, user management
+  js/app.js                Hash router
+server/
+  index.js                 Entry point (npm start)
+  app.js                   Express app, security headers, static files
+  api.js                   JSON API
+  auth.js                  Passwords, sessions, roles, rate limiting
+  db.js                    SQLite / PostgreSQL adapter and schema
+  config.js                Environment configuration
+  cli.js                   User management and backup commands
+test/api.test.js           API tests
 ```
 
 ## Roadmap (built step by step)
@@ -32,10 +110,10 @@ js/app.js                Hash router
 |------|---------|--------|
 | 1 | **Controls catalog** – overview of 18 controls, Implementation Groups, control detail pages, searchable/filterable list of all 153 safeguards | ✅ Done |
 | 2 | **Customer & assessment setup** – customer profile, engagement details, target IG (with a "help me choose" guide), target maturity, per-safeguard scoping with exclusion reasons; saved in the browser with JSON import/export, duplicate and delete | ✅ Done |
-| 3 | **Safeguard assessment** – score each in-scope safeguard on the 0–5 maturity scale, with evidence and notes | ⏳ Next |
-| 4 | **Results dashboard** – compliance score per control, IG, asset type and security function; gap list | Planned |
+| 3 | **Safeguard assessment** – score each in-scope safeguard on the 0–5 maturity scale with evidence, observations and recommendation; live progress, gaps and filters. **Shared storage**: Node.js server with SQLite or PostgreSQL, team sign-in and roles | ✅ Done |
+| 4 | **Results dashboard** – maturity score per control, IG, asset type and security function; gap list | ⏳ Next |
 | 5 | **Proposal & report** – printable/PDF customer report with executive summary, prioritized remediation roadmap and Alphavito service recommendations | Planned |
-| 6 | **Optional backend** – multi-user accounts, database storage, shared assessments | Planned |
+| 6 | **Hardening & extras** – audit history, SSO (Microsoft Entra ID), customer-facing read-only links | Planned |
 
 ## Maturity scale
 
@@ -49,12 +127,6 @@ Each in-scope safeguard is scored 0–5; anything below the assessment's target 
 | 3 | Defined | Documented, approved, consistently applied |
 | 4 | Managed | Measured and monitored with metrics |
 | 5 | Optimized | Automated and continuously improved |
-
-## Where data is stored
-
-Assessments are saved in the browser's local storage on the machine you're using; nothing is sent
-to a server. Use **Export** to back up an assessment or move it to another machine, and **Import**
-to load it. Clearing browser data deletes local assessments, so export anything important.
 
 ## Data source & licensing
 
