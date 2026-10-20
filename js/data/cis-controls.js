@@ -24,6 +24,15 @@ window.CIS_DATA = {
     { ig: 2, name: "IG2 – Expanded", desc: "For enterprises with dedicated IT staff managing multiple departments with different risk profiles, often storing sensitive client or enterprise data and subject to regulatory requirements." },
     { ig: 3, name: "IG3 – Comprehensive", desc: "For enterprises with security experts on staff, handling sensitive data and functions subject to regulatory and compliance oversight, which must defend against sophisticated attacks." }
   ],
+  // 0–5 maturity scale used to score each safeguard during an assessment.
+  maturityLevels: [
+    { level: 0, name: "Non-existent", desc: "The safeguard is not implemented; no process or technology is in place." },
+    { level: 1, name: "Initial", desc: "Ad hoc and reactive. Done occasionally or by individuals, undocumented and inconsistent." },
+    { level: 2, name: "Developing", desc: "Partially implemented. Repeatable in some areas but informal, with gaps in coverage." },
+    { level: 3, name: "Defined", desc: "Documented, approved and consistently applied across the in-scope environment." },
+    { level: 4, name: "Managed", desc: "Measured and monitored with metrics; deviations are detected and corrected." },
+    { level: 5, name: "Optimized", desc: "Automated where possible and continuously improved based on metrics and lessons learned." }
+  ],
   controls: [
     {
       id: 1,
