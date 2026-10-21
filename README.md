@@ -68,6 +68,16 @@ docker run -d -p 3000:3000 -v avcis-data:/data \
   -e ADMIN_USERNAME=admin -e ADMIN_PASSWORD='change-me-please' avcis
 ```
 
+**Vercel** (uses PostgreSQL, since Vercel has no permanent disk)
+
+1. Create a PostgreSQL database, e.g. on [Neon](https://neon.tech) (free tier; also available from the Vercel Marketplace), and copy its **pooled** connection string.
+2. Import this GitHub repository in Vercel. No build settings are needed: `vercel.json` serves `public/` and routes `/api/*` to `api/index.js`.
+3. In **Project → Settings → Environment Variables** add:
+   - `DATABASE_URL` – the Neon connection string
+   - `SESSION_SECRET` – a random string of 32+ characters (e.g. `openssl rand -base64 48`)
+   - `ADMIN_USERNAME` / `ADMIN_PASSWORD` – the first admin, created on first request
+4. Deploy, sign in, and change the admin password under your name → **My account**.
+
 **VPS / Hostinger Node.js hosting**: upload the project, run `npm install --omit=dev`, set the
 environment variables from `.env.example` and start with `npm start` (or a process manager such as
 pm2). Put it behind HTTPS.
@@ -91,8 +101,11 @@ public/                    Browser app (served by the server, or usable standalo
   js/store.js              Storage: server API or browser (Local mode)
   js/catalog.js            Step 1: overview, control detail, safeguard search
   js/assessments.js        Steps 2–3: assessment list, profile, scope, scoring
+  js/results.js            Step 4: results dashboard and gap list
   js/account.js            Sign-in, my account, user management
   js/app.js                Hash router
+api/index.js               Vercel serverless entry point
+vercel.json                Vercel routing and security headers
 server/
   index.js                 Entry point (npm start)
   app.js                   Express app, security headers, static files
@@ -111,8 +124,8 @@ test/api.test.js           API tests
 | 1 | **Controls catalog** – overview of 18 controls, Implementation Groups, control detail pages, searchable/filterable list of all 153 safeguards | ✅ Done |
 | 2 | **Customer & assessment setup** – customer profile, engagement details, target IG (with a "help me choose" guide), target maturity, per-safeguard scoping with exclusion reasons; saved in the browser with JSON import/export, duplicate and delete | ✅ Done |
 | 3 | **Safeguard assessment** – score each in-scope safeguard on the 0–5 maturity scale with evidence, observations and recommendation; live progress, gaps and filters. **Shared storage**: Node.js server with SQLite or PostgreSQL, team sign-in and roles | ✅ Done |
-| 4 | **Results dashboard** – maturity score per control, IG, asset type and security function; gap list | ⏳ Next |
-| 5 | **Proposal & report** – printable/PDF customer report with executive summary, prioritized remediation roadmap and Alphavito service recommendations | Planned |
+| 4 | **Results dashboard** – overall maturity, % meeting target, gaps by priority; maturity charts by control, security function, IG and asset type (with data tables); prioritized gap list with recommendations, CSV export and print/PDF | ✅ Done |
+| 5 | **Proposal & report** – branded customer report with executive summary, prioritized remediation roadmap and Alphavito service recommendations | ⏳ Next |
 | 6 | **Hardening & extras** – audit history, SSO (Microsoft Entra ID), customer-facing read-only links | Planned |
 
 ## Maturity scale

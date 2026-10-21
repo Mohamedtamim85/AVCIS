@@ -30,7 +30,7 @@
   const TEXT_FIELDS = ["title", "assessor", "startDate", "dueDate", "objectives"];
   const RESPONSE_TEXT_FIELDS = ["evidence", "notes", "recommendation"];
 
-  const SAFEGUARDS = DATA.controls.flatMap(c => c.safeguards);
+  const SAFEGUARDS = DATA.controls.flatMap(c => c.safeguards.map(s => Object.assign({ controlId: c.id }, s)));
   const VALID_IDS = new Set(SAFEGUARDS.map(s => s.id));
 
   function str(v, max) {
@@ -106,6 +106,70 @@
     };
   }
 
+  // Gap priority: IG1 safeguards are the essential baseline, so their gaps come
+  // first; a gap of 3+ levels is high regardless of IG.
+  function priority(ig, gap) {
+    if (!gap) return null;
+    if (ig === 1 || gap >= 3) return "High";
+    return ig === 2 ? "Medium" : "Low";
+  }
+
+  function average(values) {
+    return values.length ? values.reduce((x, y) => x + y, 0) / values.length : null;
+  }
+
+  // Scores for the Results dashboard and reports. Unscored safeguards are left
+  // out of averages and counted separately as coverage.
+  function results(a, responses) {
+    const target = a.targetMaturity;
+    const items = inScope(a).map(s => {
+      const r = responses[s.id] || {};
+      const maturity = r.maturity === undefined ? null : r.maturity;
+      const gap = maturity === null ? null : Math.max(0, target - maturity);
+      return Object.assign({}, s, {
+        maturity,
+        gap,
+        priority: priority(s.ig, gap),
+        recommendation: r.recommendation || "",
+        notes: r.notes || ""
+      });
+    });
+
+    const summarize = list => {
+      const scored = list.filter(i => i.maturity !== null);
+      return {
+        inScope: list.length,
+        scored: scored.length,
+        average: average(scored.map(i => i.maturity)),
+        meeting: scored.filter(i => i.gap === 0).length,
+        gaps: scored.filter(i => i.gap > 0).length
+      };
+    };
+    const groupBy = (keys, keyOf, labelOf) => keys
+      .map(k => Object.assign({ key: k, label: labelOf(k) }, summarize(items.filter(i => keyOf(i) === k))))
+      .filter(g => g.inScope > 0);
+
+    const rank = { High: 0, Medium: 1, Low: 2 };
+    const gaps = items.filter(i => i.gap > 0).sort((x, y) =>
+      rank[x.priority] - rank[y.priority] || y.gap - x.gap || x.controlId - y.controlId ||
+      x.id.localeCompare(y.id, undefined, { numeric: true }));
+
+    return {
+      target,
+      overall: summarize(items),
+      byControl: groupBy(DATA.controls.map(c => c.id), i => i.controlId, id => DATA.controls.find(c => c.id === id).title),
+      byFunction: groupBy(DATA.functions, i => i.fn, k => k),
+      byIG: groupBy([1, 2, 3], i => i.ig, k => "IG" + k),
+      byAsset: groupBy(DATA.assetTypes, i => i.asset, k => k),
+      gaps,
+      gapCounts: {
+        High: gaps.filter(g => g.priority === "High").length,
+        Medium: gaps.filter(g => g.priority === "Medium").length,
+        Low: gaps.filter(g => g.priority === "Low").length
+      }
+    };
+  }
+
   return {
     SCHEMA,
     STATUSES,
@@ -117,6 +181,8 @@
     normalizeResponses,
     isEmptyResponse,
     inScope,
-    progress
+    progress,
+    priority,
+    results
   };
 });

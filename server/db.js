@@ -85,10 +85,10 @@ function toPg(sql) {
   return sql.replace(/\?/g, () => "$" + (++i));
 }
 
-function openPostgres(url) {
+function openPostgres(url, poolSize) {
   const { Pool } = require("pg");
   const local = /@(localhost|127\.0\.0\.1)(:\d+)?\//.test(url) || /sslmode=disable/.test(url);
-  const pool = new Pool({ connectionString: url, ssl: local ? false : { rejectUnauthorized: true }, max: 10 });
+  const pool = new Pool({ connectionString: url, ssl: local ? false : { rejectUnauthorized: true }, max: poolSize || 10 });
 
   const wrap = client => ({
     kind: "postgres",
@@ -122,7 +122,7 @@ function openPostgres(url) {
 }
 
 async function openDatabase(config) {
-  const db = config.databaseUrl ? openPostgres(config.databaseUrl) : openSqlite(config.sqlitePath);
+  const db = config.databaseUrl ? openPostgres(config.databaseUrl, config.poolSize) : openSqlite(config.sqlitePath);
   for (const stmt of SCHEMA) await db.run(stmt);
   return db;
 }

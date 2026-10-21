@@ -431,7 +431,7 @@
     { key: "profile", label: "Profile" },
     { key: "scope", label: "Scope" },
     { key: "assess", label: "Assess" },
-    { key: "results", label: "Results", soon: "Step 4" }
+    { key: "results", label: "Results" }
   ];
 
   function workspaceHeader(a, tab) {
@@ -461,7 +461,7 @@
     setActiveNav("assessments");
     const t = nav.current();
     const id = decodeURIComponent(parts[1] || "");
-    const tab = ["scope", "assess"].includes(parts[2]) ? parts[2] : "profile";
+    const tab = ["scope", "assess", "results"].includes(parts[2]) ? parts[2] : "profile";
     app.innerHTML = loading();
     let a;
     try {
@@ -484,6 +484,7 @@
     const saver = createSaver(document.getElementById("save-status"));
     if (tab === "scope") renderScope(a, saver);
     else if (tab === "assess") renderAssess(a, saver);
+    else if (tab === "results") window.AVCIS.renderResults(a);
     else renderProfile(a);
   }
 

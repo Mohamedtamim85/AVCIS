@@ -43,6 +43,8 @@ function loadConfig(overrides) {
     dataDir,
     publicDir: path.join(ROOT, "public"),
     sessionSecret: env.SESSION_SECRET_OVERRIDE || sessionSecret(dataDir),
+    // Serverless platforms run many short-lived instances: keep few connections each.
+    poolSize: Number(env.PG_POOL_SIZE) || (env.VERCEL ? 3 : 10),
     sessionHours: Number(env.SESSION_HOURS) || 12,
     // "auto" sets the Secure cookie flag when the request arrived over HTTPS.
     cookieSecure: env.COOKIE_SECURE === undefined || env.COOKIE_SECURE === "" ? "auto" : bool(env.COOKIE_SECURE, false),
